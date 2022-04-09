@@ -1,0 +1,14 @@
+.message-list {
+	width: 100%;
+}
+
+.table td {
+	padding: 0;
+}
+
+.table td a {
+	padding: 0.25rem;
+	display: block;
+	text-decoration: none;
+	color: inherit;
+}

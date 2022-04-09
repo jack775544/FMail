@@ -1,0 +1,78 @@
+﻿@page "/message/{Id:guid}"
+@using FMail.Services
+@using Microsoft.EntityFrameworkCore
+@using FMail.Data
+@using HtmlAgilityPack
+@inject SmtpDbContext _dbContext
+
+<div>
+    <a href="/"><span class="oi oi-arrow-left" title="Home" aria-hidden="true"></span> Home</a>
+</div>
+
+<dl>
+    <dt>From:</dt>
+    <dd>@From</dd>
+
+    <dt>To:</dt>
+    <dd>@To</dd>
+
+    <dt>CC</dt>
+    <dd>@Cc</dd>
+
+    <dt>BCC</dt>
+    <dd>@Bcc</dd>
+
+    <dt>Subject</dt>
+    <dd>@Subject</dd>
+</dl>
+
+<iframe class="message-body" srcdoc="@Body"></iframe>
+
+@code {
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private SmtpMessage? DisplayedMessage { get; set; }
+
+    private string From => SmtpAddress.FormatAddresses(DisplayedMessage?.From);
+    private string To => SmtpAddress.FormatAddresses(DisplayedMessage?.To);
+    private string Cc => SmtpAddress.FormatAddresses(DisplayedMessage?.Cc);
+    private string Bcc => SmtpAddress.FormatAddresses(DisplayedMessage?.Bcc);
+    private string Subject => DisplayedMessage?.Subject ?? "No Subject Found";
+
+    private string Body
+    {
+        get
+        {
+            if (DisplayedMessage?.Body == null)
+            {
+                return "No Body Found";
+            }
+
+            var body = new HtmlDocument();
+            body.LoadHtml(DisplayedMessage.Body);
+
+            var links = body.DocumentNode.SelectNodes("//a");
+
+            if (links == null)
+            {
+                return DisplayedMessage.Body;
+            }
+
+            foreach (var link in links)
+            {
+                link.SetAttributeValue("target", "_blank");
+            }
+
+            return body.DocumentNode.OuterHtml;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        DisplayedMessage = await _dbContext.Messages
+            .Include(x => x.Attachments)
+            .FirstOrDefaultAsync(x => x.Id == Id);
+    }
+}
