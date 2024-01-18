@@ -21,7 +21,7 @@ public class SmtpAddress
 		}
 	}
 
-	public static string FormatAddresses(List<SmtpAddress>? input)
+	public static string FormatAddresses(IEnumerable<SmtpAddress>? input)
 	{
 		if (input == null)
 		{

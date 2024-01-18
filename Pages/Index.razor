@@ -2,11 +2,10 @@
 @implements IDisposable
 @using Microsoft.EntityFrameworkCore
 @using FMail.Services
-@using System.Timers
 @using FMail.Data
-@inject IDbContextFactory<SmtpDbContext> _dbContextFactory
-@inject IMessageStoreChanged _messageStoreChanged
-@inject ILogger<Index> _logger
+@inject IDbContextFactory<SmtpDbContext> DbContextFactory
+@inject IMessageStoreChanged MessageStoreChanged
+@inject ILogger<Index> Logger
 
 <PageTitle>Messages</PageTitle>
 
@@ -22,10 +21,18 @@
     <tbody>
     <Virtualize Context="message" ItemsProvider="@LoadMessages" @ref="_messages">
         <tr>
-            <td><a href="/message/@message.Id">@(SmtpAddress.FormatAddresses(message.From ?? new List<SmtpAddress>()))</a></td>
-            <td><a href="/message/@message.Id">@(SmtpAddress.FormatAddresses(message.To ?? new List<SmtpAddress>()))</a></td>
-            <td><a href="/message/@message.Id">@message.Subject</a></td>
-            <td><a href="/message/@message.Id">@message.Date</a></td>
+            <td>
+                <a href="/message/@message.Id">@SmtpAddress.FormatAddresses(message.From ?? [])</a>
+            </td>
+            <td>
+                <a href="/message/@message.Id">@SmtpAddress.FormatAddresses(message.To ?? [])</a>
+            </td>
+            <td>
+                <a href="/message/@message.Id">@message.Subject</a>
+            </td>
+            <td>
+                <a href="/message/@message.Id">@message.Date</a>
+            </td>
         </tr>
     </Virtualize>
     </tbody>
@@ -33,19 +40,17 @@
 
 @code
 {
-    private readonly Timer _timer = new(5000) { AutoReset = true };
-    private Virtualize<SmtpMessage>? _messages;
+    private Virtualize<SmtpMessage> _messages = null!;
 
     protected override void OnInitialized()
     {
-        _timer.Elapsed += OnElapsed;
-        _timer.Enabled = true;
+        MessageStoreChanged.OnMessageChanged += ReloadMessages;
     }
 
     private async ValueTask<ItemsProviderResult<SmtpMessage>> LoadMessages(
         ItemsProviderRequest request)
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(request.CancellationToken);
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync(request.CancellationToken);
         var messages = await dbContext.Messages
             .AsNoTracking()
             .OrderByDescending(x => x.Date)
@@ -57,33 +62,21 @@
         return new ItemsProviderResult<SmtpMessage>(messages, messageCount);
     }
 
-    private async void OnElapsed(object? sender, ElapsedEventArgs args)
+    private async void ReloadMessages()
     {
         try
         {
-            if (_messages == null) return;
-
             await _messages.RefreshDataAsync();
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Something went wrong fetching message list");
+            Logger.LogError(e, "Something went wrong fetching message list");
         }
-    }
-
-    private string FormatAddress(SmtpAddress address)
-    {
-        if (!string.IsNullOrWhiteSpace(address.Name))
-        {
-            return address.Name;
-        }
-
-        return address.Address ?? "No Address Found";
     }
 
     public void Dispose()
     {
-        _timer.Dispose();
+        MessageStoreChanged.OnMessageChanged -= ReloadMessages;
     }
 }

@@ -5,8 +5,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace FMail.Migrations
 {
-    public partial class Latest : Migration
+    /// <inheritdoc />
+    public partial class Initial : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -14,14 +16,14 @@ namespace FMail.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    From = table.Column<string>(type: "TEXT", nullable: true),
-                    To = table.Column<string>(type: "TEXT", nullable: true),
-                    Cc = table.Column<string>(type: "TEXT", nullable: true),
-                    Bcc = table.Column<string>(type: "TEXT", nullable: true),
                     Date = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Subject = table.Column<string>(type: "TEXT", nullable: true),
                     Body = table.Column<string>(type: "TEXT", nullable: true),
-                    RawContent = table.Column<byte[]>(type: "BLOB", nullable: true)
+                    RawContent = table.Column<byte[]>(type: "BLOB", nullable: true),
+                    Bcc = table.Column<string>(type: "TEXT", nullable: true),
+                    Cc = table.Column<string>(type: "TEXT", nullable: true),
+                    From = table.Column<string>(type: "TEXT", nullable: true),
+                    To = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -53,6 +55,7 @@ namespace FMail.Migrations
                 column: "SmtpMessageId");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

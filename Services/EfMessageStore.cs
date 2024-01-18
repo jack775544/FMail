@@ -7,18 +7,10 @@ using SmtpServer.Storage;
 
 namespace FMail.Services;
 
-public class EfMessageStore : MessageStore, IMessageStoreChanged
+public class EfMessageStore(IDbContextFactory<SmtpDbContext> dbContextFactory, ILogger<EfMessageStore> logger)
+	: MessageStore, IMessageStoreChanged
 {
-	private readonly IDbContextFactory<SmtpDbContext> _dbContextFactory;
-	private readonly ILogger<EfMessageStore> _logger;
-
 	public event IMessageStoreChanged.MessageChangedDelegate? OnMessageChanged;
-
-	public EfMessageStore(IDbContextFactory<SmtpDbContext> dbContextFactory, ILogger<EfMessageStore> logger)
-	{
-		_dbContextFactory = dbContextFactory;
-		_logger = logger;
-	}
 
 	public override async Task<SmtpResponse> SaveAsync(
 		ISessionContext context,
@@ -41,7 +33,7 @@ public class EfMessageStore : MessageStore, IMessageStoreChanged
 			var message = await MimeKit.MimeMessage.LoadAsync(stream, cancellationToken);
 			var smtpMessage = new SmtpMessage(message);
 
-			await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+			await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 			dbContext.Messages.Add(smtpMessage);
 			await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -51,7 +43,7 @@ public class EfMessageStore : MessageStore, IMessageStoreChanged
 		}
 		catch (Exception e)
 		{
-			_logger.LogError(e, "Failed to save mail message");
+			logger.LogError(e, "Failed to save mail message");
 			return SmtpResponse.TransactionFailed;
 		}
 	}
